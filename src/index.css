@@ -1,0 +1,296 @@
+﻿:root {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #e9ecef;
+  background: #111316;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: linear-gradient(180deg, #0e1013 0%, #141820 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.site-shell {
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  border-bottom: 1px solid #2a2e36;
+  background: rgba(14, 16, 19, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-links a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: #b9c0cb;
+}
+
+.nav-links a.active {
+  border-color: #3f4652;
+  color: #f8fbff;
+  background: #1c2028;
+}
+
+.page-wrap {
+  padding: 28px;
+}
+
+.hero-card,
+.builder-form,
+.live-preview,
+.proof-card {
+  border: 1px solid #2c313a;
+  border-radius: 18px;
+  background: #161a21;
+}
+
+.hero-card {
+  max-width: 880px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 72px 28px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #9da8b8;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.hero-card h1 {
+  margin: 12px 0 30px;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.primary-btn,
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #3c424e;
+  background: #f7f7f7;
+  color: #090a0c;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.builder-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
+}
+
+.builder-form,
+.live-preview {
+  padding: 18px;
+}
+
+.form-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.form-head h2,
+.live-preview h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.form-section {
+  border: 1px solid #2f343d;
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.form-section h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #c5ccd7;
+  font-weight: 600;
+}
+
+.entry-group {
+  border: 1px solid #2b3038;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #353b46;
+  background: #0f1217;
+  color: #eff3f8;
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.ghost-btn {
+  background: transparent;
+  color: #dbe2ec;
+}
+
+.resume-preview-shell {
+  border: 1px solid #2f343c;
+  border-radius: 12px;
+  background: #10141a;
+  padding: 16px;
+}
+
+.preview-head {
+  border-bottom: 1px solid #2f343c;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.preview-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.preview-head p,
+.preview-block p {
+  margin: 4px 0 0;
+  color: #aeb7c5;
+  font-size: 14px;
+}
+
+.preview-block {
+  padding: 8px 0;
+  border-top: 1px solid #2a2f37;
+}
+
+.preview-block h4 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #d4dbe6;
+}
+
+.mono-preview {
+  max-width: 900px;
+  margin: 0 auto;
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  border-radius: 0;
+  padding: 48px 56px;
+  font-family: "Times New Roman", Georgia, serif;
+}
+
+.mono-preview header {
+  border-bottom: 1px solid #000;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.mono-preview h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 600;
+}
+
+.mono-preview h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.mono-preview p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.mono-preview article {
+  padding: 10px 0;
+  border-top: 1px solid #000;
+}
+
+.proof-card {
+  max-width: 780px;
+  margin: 50px auto;
+  padding: 30px;
+}
+
+.proof-card h1 {
+  margin: 0 0 8px;
+}
+
+.proof-card p {
+  margin: 0;
+  color: #bdc6d3;
+}
+
+@media (max-width: 980px) {
+  .page-wrap {
+    padding: 18px;
+  }
+
+  .builder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card {
+    margin: 24px auto;
+    padding: 50px 20px;
+  }
+
+  .mono-preview {
+    padding: 28px 22px;
+  }
+}
