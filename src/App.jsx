@@ -169,6 +169,78 @@ const getStoredTemplate = () => {
   return templateOptions.includes(value) ? value : 'Classic'
 }
 
+const hasMinimumExportData = (data) => {
+  const hasName = Boolean(trimValue(data.personal.name))
+  const hasExperience = getFilledEntries(data.experience).length > 0
+  const hasProjects = getFilledEntries(data.projects).length > 0
+  return hasName && (hasExperience || hasProjects)
+}
+
+const buildPlainTextResume = (data) => {
+  const sections = []
+  const education = getFilledEntries(data.education)
+  const experience = getFilledEntries(data.experience)
+  const projects = getFilledEntries(data.projects)
+  const skills = getSkills(data.skills)
+  const github = trimValue(data.links.github)
+  const linkedin = trimValue(data.links.linkedin)
+
+  sections.push('Name')
+  sections.push(trimValue(data.personal.name) || 'Not provided')
+
+  sections.push('')
+  sections.push('Contact')
+  sections.push(
+    [trimValue(data.personal.email), trimValue(data.personal.phone), trimValue(data.personal.location)]
+      .filter(Boolean)
+      .join(' | ') || 'Not provided',
+  )
+
+  sections.push('')
+  sections.push('Summary')
+  sections.push(trimValue(data.summary) || 'Not provided')
+
+  sections.push('')
+  sections.push('Education')
+  sections.push(
+    education.length
+      ? education
+          .map((item) => [item.title, item.subtitle, item.dateRange, item.details].filter((value) => trimValue(value)).join(' | '))
+          .join('\n')
+      : 'Not provided',
+  )
+
+  sections.push('')
+  sections.push('Experience')
+  sections.push(
+    experience.length
+      ? experience
+          .map((item) => [item.title, item.subtitle, item.dateRange, item.details].filter((value) => trimValue(value)).join(' | '))
+          .join('\n')
+      : 'Not provided',
+  )
+
+  sections.push('')
+  sections.push('Projects')
+  sections.push(
+    projects.length
+      ? projects
+          .map((item) => [item.title, item.subtitle, item.dateRange, item.details].filter((value) => trimValue(value)).join(' | '))
+          .join('\n')
+      : 'Not provided',
+  )
+
+  sections.push('')
+  sections.push('Skills')
+  sections.push(skills.length ? skills.join(', ') : 'Not provided')
+
+  sections.push('')
+  sections.push('Links')
+  sections.push([github ? `GitHub: ${github}` : '', linkedin ? `LinkedIn: ${linkedin}` : ''].filter(Boolean).join('\n') || 'Not provided')
+
+  return sections.join('\n')
+}
+
 function AppFrame({ children }) {
   return (
     <div className="site-shell">
@@ -537,6 +609,7 @@ function BuilderPage() {
 function PreviewPage() {
   const data = useMemo(() => hydrateData(localStorage.getItem(storageKey)), [])
   const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
+  const [exportWarning, setExportWarning] = useState('')
 
   const changeTemplate = (template) => {
     setSelectedTemplate(template)
@@ -544,9 +617,41 @@ function PreviewPage() {
   }
   const monoTemplateClass = `template-${selectedTemplate.toLowerCase()}`
 
+  const evaluateExportWarning = () => {
+    if (hasMinimumExportData(data)) {
+      setExportWarning('')
+      return false
+    }
+
+    setExportWarning('Your resume may look incomplete.')
+    return true
+  }
+
+  const handlePrint = () => {
+    evaluateExportWarning()
+    window.print()
+  }
+
+  const handleCopyText = async () => {
+    evaluateExportWarning()
+    const plainText = buildPlainTextResume(data)
+    await navigator.clipboard.writeText(plainText)
+  }
+
   return (
     <AppFrame>
       <TemplateTabs selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+      <section className="preview-tools">
+        <div className="tool-row">
+          <button type="button" onClick={handlePrint}>
+            Print / Save as PDF
+          </button>
+          <button type="button" onClick={handleCopyText}>
+            Copy Resume as Text
+          </button>
+        </div>
+        {exportWarning ? <p className="export-warning">{exportWarning}</p> : null}
+      </section>
       <section className={`mono-preview ${monoTemplateClass}`}>
         <header>
           <h1>{trimValue(data.personal.name) || 'Your Name'}</h1>
