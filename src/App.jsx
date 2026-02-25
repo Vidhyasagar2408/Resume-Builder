@@ -2,6 +2,9 @@
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 
 const storageKey = 'resumeBuilderData'
+const templateStorageKey = 'resumeBuilderTemplate'
+const templateOptions = ['Classic', 'Modern', 'Minimal']
+const actionVerbs = ['Built', 'Developed', 'Designed', 'Implemented', 'Led', 'Improved', 'Created', 'Optimized', 'Automated']
 
 const createBlankEntry = () => ({ title: '', subtitle: '', dateRange: '', details: '' })
 
@@ -81,6 +84,13 @@ const hasImpactNumbers = (entries) => {
   return entries.some((entry) => numberPattern.test([entry.title, entry.subtitle, entry.details].join(' ')))
 }
 
+const hasNumberInText = (text) => /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i.test(text)
+
+const startsWithActionVerb = (text) => {
+  const firstWord = trimValue(text).split(/\s+/)[0] || ''
+  return actionVerbs.some((verb) => verb.toLowerCase() === firstWord.toLowerCase())
+}
+
 const hydrateData = (rawValue) => {
   if (!rawValue) return initialBuilderState
 
@@ -137,6 +147,28 @@ const getAtsAssessment = (data) => {
   return { score: Math.min(score, 100), suggestions: suggestions.slice(0, 3) }
 }
 
+const getTopImprovements = (data) => {
+  const improvements = []
+  const projects = getFilledEntries(data.projects)
+  const experience = getFilledEntries(data.experience)
+  const summaryWords = getWordCount(data.summary)
+  const skills = getSkills(data.skills)
+  const impactPresent = hasImpactNumbers([...experience, ...projects])
+
+  if (projects.length < 2) improvements.push('Add at least 2 projects.')
+  if (!impactPresent) improvements.push('Add measurable impact (numbers) in bullets.')
+  if (summaryWords < 40) improvements.push('Expand your summary to at least 40 words.')
+  if (skills.length < 8) improvements.push('Add more skills (target 8+).')
+  if (!experience.length) improvements.push('Add experience, internship, or project work.')
+
+  return improvements.slice(0, 3)
+}
+
+const getStoredTemplate = () => {
+  const value = localStorage.getItem(templateStorageKey)
+  return templateOptions.includes(value) ? value : 'Classic'
+}
+
 function AppFrame({ children }) {
   return (
     <div className="site-shell">
@@ -167,7 +199,26 @@ function HomePage() {
   )
 }
 
-function DynamicSection({ title, items, onChange, onAdd }) {
+function TemplateTabs({ selectedTemplate, onChangeTemplate }) {
+  return (
+    <div className="template-tabs" role="tablist" aria-label="Resume template selector">
+      {templateOptions.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="tab"
+          aria-selected={selectedTemplate === option}
+          className={`template-tab ${selectedTemplate === option ? 'active' : ''}`}
+          onClick={() => onChangeTemplate(option)}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function DynamicSection({ title, items, onChange, onAdd, enableBulletGuidance = false }) {
   return (
     <section className="form-section">
       <h3>{title}</h3>
@@ -193,6 +244,24 @@ function DynamicSection({ title, items, onChange, onAdd }) {
             onChange={(event) => onChange(index, 'details', event.target.value)}
             placeholder="Details"
           />
+          {enableBulletGuidance
+            ? item.details
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line, lineIndex) => {
+                  const needsVerbSuggestion = !startsWithActionVerb(line)
+                  const needsNumberSuggestion = !hasNumberInText(line)
+                  if (!needsVerbSuggestion && !needsNumberSuggestion) return null
+
+                  return (
+                    <div key={`${title}-${index}-${lineIndex}`} className="inline-guidance">
+                      {needsVerbSuggestion ? <p>Start with a strong action verb.</p> : null}
+                      {needsNumberSuggestion ? <p>Add measurable impact (numbers).</p> : null}
+                    </div>
+                  )
+                })
+            : null}
         </div>
       ))}
       <button type="button" className="ghost-btn" onClick={onAdd}>
@@ -283,9 +352,11 @@ function RenderResumeSections({ data, mode = 'builder' }) {
   )
 }
 
-function PreviewShell({ data }) {
+function PreviewShell({ data, template }) {
+  const templateClass = `template-${template.toLowerCase()}`
+
   return (
-    <section className="resume-preview-shell">
+    <section className={`resume-preview-shell ${templateClass}`}>
       <div className="preview-head">
         <h2>{trimValue(data.personal.name) || 'Your Name'}</h2>
         <p>
@@ -301,10 +372,16 @@ function PreviewShell({ data }) {
 
 function BuilderPage() {
   const [formData, setFormData] = useState(() => hydrateData(localStorage.getItem(storageKey)))
+  const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
 
   const saveDraft = (nextValue) => {
     setFormData(nextValue)
     localStorage.setItem(storageKey, JSON.stringify(nextValue))
+  }
+
+  const changeTemplate = (template) => {
+    setSelectedTemplate(template)
+    localStorage.setItem(templateStorageKey, template)
   }
 
   const updatePersonal = (field, value) => {
@@ -326,6 +403,7 @@ function BuilderPage() {
   }
 
   const ats = useMemo(() => getAtsAssessment(formData), [formData])
+  const topImprovements = useMemo(() => getTopImprovements(formData), [formData])
 
   return (
     <AppFrame>
@@ -382,12 +460,14 @@ function BuilderPage() {
             items={formData.experience}
             onChange={(index, field, value) => updateDynamic('experience', index, field, value)}
             onAdd={() => addDynamic('experience')}
+            enableBulletGuidance
           />
           <DynamicSection
             title="Projects"
             items={formData.projects}
             onChange={(index, field, value) => updateDynamic('projects', index, field, value)}
             onAdd={() => addDynamic('projects')}
+            enableBulletGuidance
           />
 
           <section className="form-section">
@@ -416,6 +496,7 @@ function BuilderPage() {
 
         <aside className="live-preview">
           <h2>Live Preview</h2>
+          <TemplateTabs selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
           <section className="ats-card">
             <div className="ats-head">
               <h3>ATS Readiness Score</h3>
@@ -433,8 +514,20 @@ function BuilderPage() {
             ) : (
               <p className="ats-good">Strong ATS baseline for v1.</p>
             )}
+            <div className="improvements-panel">
+              <h4>Top 3 Improvements</h4>
+              {topImprovements.length ? (
+                <ul className="ats-suggestions">
+                  {topImprovements.map((improvement) => (
+                    <li key={improvement}>{improvement}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ats-good">No critical improvements detected.</p>
+              )}
+            </div>
           </section>
-          <PreviewShell data={formData} />
+          <PreviewShell data={formData} template={selectedTemplate} />
         </aside>
       </div>
     </AppFrame>
@@ -443,10 +536,18 @@ function BuilderPage() {
 
 function PreviewPage() {
   const data = useMemo(() => hydrateData(localStorage.getItem(storageKey)), [])
+  const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
+
+  const changeTemplate = (template) => {
+    setSelectedTemplate(template)
+    localStorage.setItem(templateStorageKey, template)
+  }
+  const monoTemplateClass = `template-${selectedTemplate.toLowerCase()}`
 
   return (
     <AppFrame>
-      <section className="mono-preview">
+      <TemplateTabs selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+      <section className={`mono-preview ${monoTemplateClass}`}>
         <header>
           <h1>{trimValue(data.personal.name) || 'Your Name'}</h1>
           <p>

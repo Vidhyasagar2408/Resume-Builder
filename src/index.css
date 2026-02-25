@@ -139,6 +139,33 @@ button {
   font-size: 20px;
 }
 
+.template-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #2d333d;
+  border-radius: 999px;
+  padding: 4px;
+  background: #12161d;
+}
+
+.template-tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c0c8d4;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.template-tab.active {
+  background: #eef2f8;
+  color: #121418;
+  border-color: #eef2f8;
+}
+
 .ats-card {
   margin-top: 12px;
   margin-bottom: 14px;
@@ -198,6 +225,20 @@ button {
   font-size: 13px;
 }
 
+.improvements-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2c333e;
+}
+
+.improvements-panel h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #d1d8e4;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 .form-section {
   border: 1px solid #2f343d;
   border-radius: 14px;
@@ -234,6 +275,18 @@ textarea {
 textarea {
   min-height: 90px;
   resize: vertical;
+}
+
+.inline-guidance {
+  margin-top: 6px;
+  border-left: 2px solid #4e5664;
+  padding-left: 8px;
+}
+
+.inline-guidance p {
+  margin: 2px 0;
+  font-size: 12px;
+  color: #aeb7c5;
 }
 
 .ghost-btn {
@@ -359,6 +412,28 @@ textarea {
 .proof-card p {
   margin: 0;
   color: #bdc6d3;
+}
+
+.template-classic {
+  font-family: "Times New Roman", Georgia, serif;
+}
+
+.template-modern {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.template-modern .preview-head h2,
+.mono-preview.template-modern h1 {
+  letter-spacing: -0.02em;
+}
+
+.template-minimal {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.template-minimal .preview-head,
+.mono-preview.template-minimal header {
+  border-bottom-style: dashed;
 }
 
 @media (max-width: 980px) {
