@@ -7,14 +7,25 @@ const templateOptions = ['Classic', 'Modern', 'Minimal']
 const actionVerbs = ['Built', 'Developed', 'Designed', 'Implemented', 'Led', 'Improved', 'Created', 'Optimized', 'Automated']
 
 const createBlankEntry = () => ({ title: '', subtitle: '', dateRange: '', details: '' })
+const createBlankProject = () => ({
+  title: '',
+  description: '',
+  techStack: [],
+  liveUrl: '',
+  githubUrl: '',
+})
 
 const initialBuilderState = {
   personal: { name: '', email: '', phone: '', location: '' },
   summary: '',
   education: [createBlankEntry()],
   experience: [createBlankEntry()],
-  projects: [createBlankEntry()],
-  skills: '',
+  projects: [createBlankProject()],
+  skills: {
+    technical: [],
+    soft: [],
+    tools: [],
+  },
   links: { github: '', linkedin: '' },
 }
 
@@ -46,18 +57,24 @@ const sampleBuilderState = {
   projects: [
     {
       title: 'AI Resume Builder',
-      subtitle: 'React, Vite',
-      dateRange: '2026',
-      details: 'Built guided resume authoring flow used by 1.2k+ learners.',
+      description: 'Built guided resume authoring flow used by 1.2k+ learners.',
+      techStack: ['React', 'Vite'],
+      liveUrl: 'https://example.com/resume-builder',
+      githubUrl: 'https://github.com/alexcarter/resume-builder',
     },
     {
       title: 'Portfolio CMS',
-      subtitle: 'Node, React',
-      dateRange: '2025',
-      details: 'Reduced content publishing time by 45% with reusable templates.',
+      description: 'Reduced content publishing time by 45% with reusable templates.',
+      techStack: ['Node.js', 'React'],
+      liveUrl: '',
+      githubUrl: 'https://github.com/alexcarter/portfolio-cms',
     },
   ],
-  skills: 'React, JavaScript, TypeScript, CSS, HTML, API Integration, Git, Testing',
+  skills: {
+    technical: ['React', 'JavaScript', 'TypeScript', 'GraphQL', 'PostgreSQL'],
+    soft: ['Problem Solving', 'Team Leadership'],
+    tools: ['Git', 'Docker', 'AWS'],
+  },
   links: { github: 'github.com/alexcarter', linkedin: 'linkedin.com/in/alexcarter' },
 }
 
@@ -65,11 +82,36 @@ const trimValue = (value) => (value || '').trim()
 
 const getWordCount = (text) => trimValue(text).split(/\s+/).filter(Boolean).length
 
-const getSkills = (skillsText) =>
-  trimValue(skillsText)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
+const normalizeTagList = (value) =>
+  Array.isArray(value)
+    ? value.map((item) => trimValue(item)).filter(Boolean)
+    : trimValue(value)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+const getSkillGroups = (skillsValue) => {
+  if (typeof skillsValue === 'string') {
+    const parsed = normalizeTagList(skillsValue)
+    return {
+      technical: parsed,
+      soft: [],
+      tools: [],
+    }
+  }
+
+  const value = skillsValue || {}
+  return {
+    technical: normalizeTagList(value.technical),
+    soft: normalizeTagList(value.soft),
+    tools: normalizeTagList(value.tools),
+  }
+}
+
+const getAllSkills = (skillsValue) => {
+  const groups = getSkillGroups(skillsValue)
+  return [...groups.technical, ...groups.soft, ...groups.tools]
+}
 
 const isFilledEntry = (entry) =>
   [entry.title, entry.subtitle, entry.dateRange, entry.details].some((value) => trimValue(value))
@@ -78,10 +120,17 @@ const isCompleteEntry = (entry) =>
   [entry.title, entry.subtitle, entry.dateRange, entry.details].every((value) => trimValue(value))
 
 const getFilledEntries = (entries = []) => entries.filter(isFilledEntry)
+const isFilledProject = (project) =>
+  [project.title, project.description, project.liveUrl, project.githubUrl].some((value) => trimValue(value)) ||
+  normalizeTagList(project.techStack).length > 0
+
+const getFilledProjects = (projects = []) => projects.filter(isFilledProject)
 
 const hasImpactNumbers = (entries) => {
   const numberPattern = /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i
-  return entries.some((entry) => numberPattern.test([entry.title, entry.subtitle, entry.details].join(' ')))
+  return entries.some((entry) =>
+    numberPattern.test([entry.title, entry.subtitle, entry.details, entry.description, ...(entry.techStack || [])].join(' ')),
+  )
 }
 
 const hasNumberInText = (text) => /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i.test(text)
@@ -101,8 +150,17 @@ const hydrateData = (rawValue) => {
       summary: parsed.summary || '',
       education: Array.isArray(parsed.education) && parsed.education.length ? parsed.education : [createBlankEntry()],
       experience: Array.isArray(parsed.experience) && parsed.experience.length ? parsed.experience : [createBlankEntry()],
-      projects: Array.isArray(parsed.projects) && parsed.projects.length ? parsed.projects : [createBlankEntry()],
-      skills: parsed.skills || '',
+      projects:
+        Array.isArray(parsed.projects) && parsed.projects.length
+          ? parsed.projects.map((item) => ({
+              title: item.title || '',
+              description: item.description || item.details || '',
+              techStack: normalizeTagList(item.techStack || item.subtitle || ''),
+              liveUrl: item.liveUrl || '',
+              githubUrl: item.githubUrl || '',
+            }))
+          : [createBlankProject()],
+      skills: getSkillGroups(parsed.skills),
       links: { ...initialBuilderState.links, ...(parsed.links || {}) },
     }
   } catch {
@@ -115,10 +173,10 @@ const getAtsAssessment = (data) => {
   const suggestions = []
 
   const summaryWords = getWordCount(data.summary)
-  const projects = getFilledEntries(data.projects)
+  const projects = getFilledProjects(data.projects)
   const experience = getFilledEntries(data.experience)
   const education = getFilledEntries(data.education)
-  const skills = getSkills(data.skills)
+  const skills = getAllSkills(data.skills)
   const hasLink = Boolean(trimValue(data.links.github) || trimValue(data.links.linkedin))
   const impactPresent = hasImpactNumbers([...experience, ...projects])
   const completeEducation = education.some(isCompleteEntry)
@@ -149,10 +207,10 @@ const getAtsAssessment = (data) => {
 
 const getTopImprovements = (data) => {
   const improvements = []
-  const projects = getFilledEntries(data.projects)
+  const projects = getFilledProjects(data.projects)
   const experience = getFilledEntries(data.experience)
   const summaryWords = getWordCount(data.summary)
-  const skills = getSkills(data.skills)
+  const skills = getAllSkills(data.skills)
   const impactPresent = hasImpactNumbers([...experience, ...projects])
 
   if (projects.length < 2) improvements.push('Add at least 2 projects.')
@@ -172,7 +230,7 @@ const getStoredTemplate = () => {
 const hasMinimumExportData = (data) => {
   const hasName = Boolean(trimValue(data.personal.name))
   const hasExperience = getFilledEntries(data.experience).length > 0
-  const hasProjects = getFilledEntries(data.projects).length > 0
+  const hasProjects = getFilledProjects(data.projects).length > 0
   return hasName && (hasExperience || hasProjects)
 }
 
@@ -180,8 +238,8 @@ const buildPlainTextResume = (data) => {
   const sections = []
   const education = getFilledEntries(data.education)
   const experience = getFilledEntries(data.experience)
-  const projects = getFilledEntries(data.projects)
-  const skills = getSkills(data.skills)
+  const projects = getFilledProjects(data.projects)
+  const skillGroups = getSkillGroups(data.skills)
   const github = trimValue(data.links.github)
   const linkedin = trimValue(data.links.linkedin)
 
@@ -225,14 +283,28 @@ const buildPlainTextResume = (data) => {
   sections.push(
     projects.length
       ? projects
-          .map((item) => [item.title, item.subtitle, item.dateRange, item.details].filter((value) => trimValue(value)).join(' | '))
+          .map((item) =>
+            [
+              item.title,
+              item.description,
+              normalizeTagList(item.techStack).length ? `Tech: ${normalizeTagList(item.techStack).join(', ')}` : '',
+              item.liveUrl ? `Live: ${item.liveUrl}` : '',
+              item.githubUrl ? `GitHub: ${item.githubUrl}` : '',
+            ]
+              .filter((value) => trimValue(value))
+              .join(' | '),
+          )
           .join('\n')
       : 'Not provided',
   )
 
   sections.push('')
   sections.push('Skills')
-  sections.push(skills.length ? skills.join(', ') : 'Not provided')
+  sections.push(
+    [...skillGroups.technical, ...skillGroups.soft, ...skillGroups.tools].length
+      ? [`Technical Skills: ${skillGroups.technical.join(', ') || 'None'}`, `Soft Skills: ${skillGroups.soft.join(', ') || 'None'}`, `Tools & Technologies: ${skillGroups.tools.join(', ') || 'None'}`].join('\n')
+      : 'Not provided',
+  )
 
   sections.push('')
   sections.push('Links')
@@ -343,12 +415,211 @@ function DynamicSection({ title, items, onChange, onAdd, enableBulletGuidance = 
   )
 }
 
+function TagInput({ value, onChange, placeholder }) {
+  const [inputValue, setInputValue] = useState('')
+
+  const addTag = (rawTag) => {
+    const tag = trimValue(rawTag)
+    if (!tag) return
+    if (value.some((item) => item.toLowerCase() === tag.toLowerCase())) return
+    onChange([...value, tag])
+    setInputValue('')
+  }
+
+  return (
+    <div className="tag-input-wrap">
+      <div className="tag-list">
+        {value.map((tag) => (
+          <span key={tag} className="tag-chip">
+            {tag}
+            <button type="button" className="chip-remove" onClick={() => onChange(value.filter((item) => item !== tag))}>
+              x
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        value={inputValue}
+        placeholder={placeholder}
+        onChange={(event) => setInputValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return
+          event.preventDefault()
+          addTag(inputValue)
+        }}
+      />
+    </div>
+  )
+}
+
+function SkillsAccordion({ skills, onChangeSkills }) {
+  const [isSuggesting, setIsSuggesting] = useState(false)
+
+  const updateCategory = (key, tags) => {
+    onChangeSkills({ ...skills, [key]: tags })
+  }
+
+  const suggestSkills = async () => {
+    setIsSuggesting(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    const addUnique = (existing, incoming) => {
+      const lower = new Set(existing.map((item) => item.toLowerCase()))
+      return [...existing, ...incoming.filter((item) => !lower.has(item.toLowerCase()))]
+    }
+
+    onChangeSkills({
+      technical: addUnique(skills.technical, ['TypeScript', 'React', 'Node.js', 'PostgreSQL', 'GraphQL']),
+      soft: addUnique(skills.soft, ['Team Leadership', 'Problem Solving']),
+      tools: addUnique(skills.tools, ['Git', 'Docker', 'AWS']),
+    })
+
+    setIsSuggesting(false)
+  }
+
+  return (
+    <section className="form-section">
+      <details open className="accordion-panel">
+        <summary>Skills</summary>
+        <div className="accordion-body">
+          <div className="skill-group">
+            <label>Technical Skills ({skills.technical.length})</label>
+            <TagInput
+              value={skills.technical}
+              onChange={(tags) => updateCategory('technical', tags)}
+              placeholder="Add technical skill and press Enter"
+            />
+          </div>
+          <div className="skill-group">
+            <label>Soft Skills ({skills.soft.length})</label>
+            <TagInput value={skills.soft} onChange={(tags) => updateCategory('soft', tags)} placeholder="Add soft skill and press Enter" />
+          </div>
+          <div className="skill-group">
+            <label>Tools & Technologies ({skills.tools.length})</label>
+            <TagInput
+              value={skills.tools}
+              onChange={(tags) => updateCategory('tools', tags)}
+              placeholder="Add tool and press Enter"
+            />
+          </div>
+          <button type="button" className="ghost-btn" onClick={suggestSkills} disabled={isSuggesting}>
+            {isSuggesting ? 'Suggesting...' : '✨ Suggest Skills'}
+          </button>
+        </div>
+      </details>
+    </section>
+  )
+}
+
+function ProjectsAccordion({ projects, onAddProject, onDeleteProject, onUpdateProject }) {
+  const [tagDrafts, setTagDrafts] = useState({})
+
+  const setTagDraft = (index, value) => {
+    setTagDrafts((prev) => ({ ...prev, [index]: value }))
+  }
+
+  const addTechTag = (index) => {
+    const nextTag = trimValue(tagDrafts[index])
+    if (!nextTag) return
+    const existing = normalizeTagList(projects[index].techStack)
+    if (existing.some((item) => item.toLowerCase() === nextTag.toLowerCase())) return
+    onUpdateProject(index, 'techStack', [...existing, nextTag])
+    setTagDraft(index, '')
+  }
+
+  return (
+    <section className="form-section">
+      <div className="accordion-head">
+        <h3>Projects</h3>
+        <button type="button" onClick={onAddProject}>
+          Add Project
+        </button>
+      </div>
+      {projects.map((project, index) => (
+        <details key={`project-${index}`} open className="accordion-panel">
+          <summary>{trimValue(project.title) || `Project ${index + 1}`}</summary>
+          <div className="accordion-body">
+            <input
+              value={project.title}
+              onChange={(event) => onUpdateProject(index, 'title', event.target.value)}
+              placeholder="Project Title"
+            />
+            <textarea
+              value={project.description}
+              maxLength={200}
+              onChange={(event) => onUpdateProject(index, 'description', event.target.value)}
+              placeholder="Description (max 200 chars)"
+            />
+            <div className="text-counter">{project.description.length}/200</div>
+            {project.description
+              .split('\n')
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line, lineIndex) => {
+                const needsVerbSuggestion = !startsWithActionVerb(line)
+                const needsNumberSuggestion = !hasNumberInText(line)
+                if (!needsVerbSuggestion && !needsNumberSuggestion) return null
+
+                return (
+                  <div key={`project-guidance-${index}-${lineIndex}`} className="inline-guidance">
+                    {needsVerbSuggestion ? <p>Start with a strong action verb.</p> : null}
+                    {needsNumberSuggestion ? <p>Add measurable impact (numbers).</p> : null}
+                  </div>
+                )
+              })}
+            <label className="inline-label">Tech Stack</label>
+            <div className="tag-input-wrap">
+              <div className="tag-list">
+                {normalizeTagList(project.techStack).map((tag) => (
+                  <span key={`${index}-${tag}`} className="tag-chip">
+                    {tag}
+                    <button
+                      type="button"
+                      className="chip-remove"
+                      onClick={() => onUpdateProject(index, 'techStack', normalizeTagList(project.techStack).filter((item) => item !== tag))}
+                    >
+                      x
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                value={tagDrafts[index] || ''}
+                placeholder="Add tech and press Enter"
+                onChange={(event) => setTagDraft(index, event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return
+                  event.preventDefault()
+                  addTechTag(index)
+                }}
+              />
+            </div>
+            <input
+              value={project.liveUrl}
+              onChange={(event) => onUpdateProject(index, 'liveUrl', event.target.value)}
+              placeholder="Live URL (optional)"
+            />
+            <input
+              value={project.githubUrl}
+              onChange={(event) => onUpdateProject(index, 'githubUrl', event.target.value)}
+              placeholder="GitHub URL (optional)"
+            />
+            <button type="button" className="danger-btn" onClick={() => onDeleteProject(index)}>
+              Delete
+            </button>
+          </div>
+        </details>
+      ))}
+    </section>
+  )
+}
+
 function RenderResumeSections({ data, mode = 'builder' }) {
   const summary = trimValue(data.summary)
   const education = getFilledEntries(data.education)
   const experience = getFilledEntries(data.experience)
-  const projects = getFilledEntries(data.projects)
-  const skills = getSkills(data.skills)
+  const projects = getFilledProjects(data.projects)
+  const skills = getSkillGroups(data.skills)
   const github = trimValue(data.links.github)
   const linkedin = trimValue(data.links.linkedin)
 
@@ -396,20 +667,74 @@ function RenderResumeSections({ data, mode = 'builder' }) {
         <section className={sectionClass}>
           <h4 className={headingClass}>Projects</h4>
           {projects.map((item, index) => (
-            <article key={`pro-${index}`} className="resume-item">
+            <article key={`pro-${index}`} className="resume-item project-card">
               <h5>{item.title}</h5>
-              <p>{item.subtitle}</p>
-              <p>{item.dateRange}</p>
-              <p>{item.details}</p>
+              {trimValue(item.description) ? <p>{item.description}</p> : null}
+              {normalizeTagList(item.techStack).length ? (
+                <div className="tag-list preview-tags">
+                  {normalizeTagList(item.techStack).map((tag) => (
+                    <span key={`${item.title}-${tag}`} className="tag-chip">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="project-links">
+                {trimValue(item.liveUrl) ? (
+                  <a href={item.liveUrl} target="_blank" rel="noreferrer">
+                    ↗ Live
+                  </a>
+                ) : null}
+                {trimValue(item.githubUrl) ? (
+                  <a href={item.githubUrl} target="_blank" rel="noreferrer">
+                    {"</>"} GitHub
+                  </a>
+                ) : null}
+              </div>
             </article>
           ))}
         </section>
       ) : null}
 
-      {skills.length ? (
+      {[...skills.technical, ...skills.soft, ...skills.tools].length ? (
         <section className={sectionClass}>
           <h4 className={headingClass}>Skills</h4>
-          <p>{skills.join(', ')}</p>
+          {skills.technical.length ? (
+            <div className="skills-group-preview">
+              <h5>Technical Skills</h5>
+              <div className="tag-list preview-tags">
+                {skills.technical.map((tag) => (
+                  <span key={`tech-${tag}`} className="tag-chip">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {skills.soft.length ? (
+            <div className="skills-group-preview">
+              <h5>Soft Skills</h5>
+              <div className="tag-list preview-tags">
+                {skills.soft.map((tag) => (
+                  <span key={`soft-${tag}`} className="tag-chip">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {skills.tools.length ? (
+            <div className="skills-group-preview">
+              <h5>Tools & Technologies</h5>
+              <div className="tag-list preview-tags">
+                {skills.tools.map((tag) => (
+                  <span key={`tool-${tag}`} className="tag-chip">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -474,6 +799,25 @@ function BuilderPage() {
     saveDraft({ ...formData, [section]: [...formData[section], createBlankEntry()] })
   }
 
+  const updateSkills = (nextSkills) => {
+    saveDraft({ ...formData, skills: nextSkills })
+  }
+
+  const addProject = () => {
+    saveDraft({ ...formData, projects: [...formData.projects, createBlankProject()] })
+  }
+
+  const deleteProject = (projectIndex) => {
+    const nextProjects = formData.projects.filter((_, index) => index !== projectIndex)
+    saveDraft({ ...formData, projects: nextProjects.length ? nextProjects : [createBlankProject()] })
+  }
+
+  const updateProject = (projectIndex, field, value) => {
+    const nextProjects = [...formData.projects]
+    nextProjects[projectIndex] = { ...nextProjects[projectIndex], [field]: value }
+    saveDraft({ ...formData, projects: nextProjects })
+  }
+
   const ats = useMemo(() => getAtsAssessment(formData), [formData])
   const topImprovements = useMemo(() => getTopImprovements(formData), [formData])
 
@@ -534,22 +878,14 @@ function BuilderPage() {
             onAdd={() => addDynamic('experience')}
             enableBulletGuidance
           />
-          <DynamicSection
-            title="Projects"
-            items={formData.projects}
-            onChange={(index, field, value) => updateDynamic('projects', index, field, value)}
-            onAdd={() => addDynamic('projects')}
-            enableBulletGuidance
+          <ProjectsAccordion
+            projects={formData.projects}
+            onAddProject={addProject}
+            onDeleteProject={deleteProject}
+            onUpdateProject={updateProject}
           />
 
-          <section className="form-section">
-            <h3>Skills</h3>
-            <input
-              value={formData.skills}
-              onChange={(event) => saveDraft({ ...formData, skills: event.target.value })}
-              placeholder="JavaScript, React, CSS"
-            />
-          </section>
+          <SkillsAccordion skills={getSkillGroups(formData.skills)} onChangeSkills={updateSkills} />
 
           <section className="form-section">
             <h3>Links</h3>

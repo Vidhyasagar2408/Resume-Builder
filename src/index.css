@@ -253,6 +253,37 @@ button {
   font-weight: 600;
 }
 
+.accordion-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.accordion-panel {
+  border: 1px solid #2b3038;
+  border-radius: 10px;
+  margin-top: 10px;
+  background: #131820;
+}
+
+.accordion-panel summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #d7deea;
+}
+
+.accordion-panel[open] summary {
+  border-bottom: 1px solid #2b3038;
+}
+
+.accordion-body {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
 .entry-group {
   border: 1px solid #2b3038;
   border-radius: 10px;
@@ -287,6 +318,61 @@ textarea {
   margin: 2px 0;
   font-size: 12px;
   color: #aeb7c5;
+}
+
+.text-counter {
+  font-size: 12px;
+  color: #aeb7c5;
+  text-align: right;
+}
+
+.inline-label {
+  font-size: 12px;
+  color: #c8d0dc;
+}
+
+.tag-input-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #404854;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #e2e8f2;
+  background: #1a2029;
+}
+
+.chip-remove {
+  border: 0;
+  background: transparent;
+  color: #d6deea;
+  padding: 0;
+  line-height: 1;
+  min-width: 10px;
+}
+
+.skill-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: #c7d0dd;
+  font-size: 13px;
+}
+
+.danger-btn {
+  background: #f7f7f7;
+  color: #090a0c;
 }
 
 .ghost-btn {
@@ -346,6 +432,42 @@ textarea {
   margin: 3px 0 0;
 }
 
+.skills-group-preview {
+  margin-top: 8px;
+}
+
+.skills-group-preview h5 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #d4dbe6;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.preview-tags .tag-chip {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.project-card {
+  border: 1px solid #303746;
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+}
+
+.project-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.project-links a {
+  font-size: 12px;
+  color: #dbe4f2;
+}
+
 .mono-preview {
   max-width: 900px;
   margin: 0 auto;
@@ -385,6 +507,21 @@ textarea {
 .mono-preview article {
   padding: 10px 0;
   border-top: 1px solid #000;
+}
+
+.mono-preview .tag-chip {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+
+.mono-preview .project-card {
+  border-color: #000;
+}
+
+.mono-preview .skills-group-preview h5,
+.mono-preview .project-links a {
+  color: #000;
 }
 
 .mono-section {
