@@ -197,6 +197,90 @@ button {
   font-size: 13px;
 }
 
+.ats-ring-card {
+  margin-bottom: 12px;
+  border: 1px solid #2f353f;
+  border-radius: 12px;
+  padding: 12px;
+  background: #121821;
+}
+
+.score-ring-wrap {
+  width: 120px;
+  height: 120px;
+  position: relative;
+}
+
+.score-ring {
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  stroke: #303846;
+}
+
+.ring-progress {
+  stroke: #8ad38a;
+  transition: stroke-dashoffset 0.25s ease;
+}
+
+.score-ring-wrap.needs-work .ring-progress {
+  stroke: #d55a5a;
+}
+
+.score-ring-wrap.getting-there .ring-progress {
+  stroke: #d6a246;
+}
+
+.score-ring-wrap.strong .ring-progress {
+  stroke: #5bbd73;
+}
+
+.ring-score {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #f5f8fc;
+}
+
+.score-meta {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.score-meta h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #d0d7e2;
+}
+
+.score-badge {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-weight: 600;
+}
+
+.score-badge.needs-work {
+  color: #ffd5d5;
+  background: #572929;
+}
+
+.score-badge.getting-there {
+  color: #ffe8bc;
+  background: #5f4925;
+}
+
+.score-badge.strong {
+  color: #d3ffe0;
+  background: #244732;
+}
+
 .improvements-panel {
   margin-top: 10px;
   padding-top: 10px;

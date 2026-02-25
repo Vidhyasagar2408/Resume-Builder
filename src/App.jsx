@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 
 const storageKey = 'resumeBuilderData'
@@ -88,8 +88,6 @@ const sampleBuilderState = {
 
 const trimValue = (value) => (value || '').trim()
 
-const getWordCount = (text) => trimValue(text).split(/\s+/).filter(Boolean).length
-
 const normalizeTagList = (value) =>
   Array.isArray(value)
     ? value.map((item) => trimValue(item)).filter(Boolean)
@@ -124,22 +122,12 @@ const getAllSkills = (skillsValue) => {
 const isFilledEntry = (entry) =>
   [entry.title, entry.subtitle, entry.dateRange, entry.details].some((value) => trimValue(value))
 
-const isCompleteEntry = (entry) =>
-  [entry.title, entry.subtitle, entry.dateRange, entry.details].every((value) => trimValue(value))
-
 const getFilledEntries = (entries = []) => entries.filter(isFilledEntry)
 const isFilledProject = (project) =>
   [project.title, project.description, project.liveUrl, project.githubUrl].some((value) => trimValue(value)) ||
   normalizeTagList(project.techStack).length > 0
 
 const getFilledProjects = (projects = []) => projects.filter(isFilledProject)
-
-const hasImpactNumbers = (entries) => {
-  const numberPattern = /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i
-  return entries.some((entry) =>
-    numberPattern.test([entry.title, entry.subtitle, entry.details, entry.description, ...(entry.techStack || [])].join(' ')),
-  )
-}
 
 const hasNumberInText = (text) => /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i.test(text)
 
@@ -176,58 +164,67 @@ const hydrateData = (rawValue) => {
   }
 }
 
-const getAtsAssessment = (data) => {
+const calculateAtsScore = (data) => {
   let score = 0
   const suggestions = []
+  const summary = trimValue(data.summary)
+  const summaryHasActionVerb = /\b(built|led|designed|improved|implemented|created|optimized|automated|developed)\b/i.test(summary)
+  const hasExperienceWithBullets = getFilledEntries(data.experience).some(
+    (entry) => trimValue(entry.details).split('\n').map((line) => line.trim()).filter(Boolean).length > 0,
+  )
+  const hasEducation = getFilledEntries(data.education).length > 0
+  const hasSkills = getAllSkills(data.skills).length >= 5
+  const hasProjects = getFilledProjects(data.projects).length > 0
+  const hasName = Boolean(trimValue(data.personal.name))
+  const hasEmail = Boolean(trimValue(data.personal.email))
+  const hasPhone = Boolean(trimValue(data.personal.phone))
+  const hasLinkedIn = Boolean(trimValue(data.links.linkedin))
+  const hasGitHub = Boolean(trimValue(data.links.github))
 
-  const summaryWords = getWordCount(data.summary)
-  const projects = getFilledProjects(data.projects)
-  const experience = getFilledEntries(data.experience)
-  const education = getFilledEntries(data.education)
-  const skills = getAllSkills(data.skills)
-  const hasLink = Boolean(trimValue(data.links.github) || trimValue(data.links.linkedin))
-  const impactPresent = hasImpactNumbers([...experience, ...projects])
-  const completeEducation = education.some(isCompleteEntry)
+  if (hasName) score += 10
+  else suggestions.push('Add your name (+10 points).')
 
-  if (summaryWords >= 40 && summaryWords <= 120) score += 15
-  else suggestions.push('Write a stronger summary (40-120 words).')
+  if (hasEmail) score += 10
+  else suggestions.push('Add your email (+10 points).')
 
-  if (projects.length >= 2) score += 10
-  else suggestions.push('Add at least 2 projects.')
+  if (summary.length > 50) score += 10
+  else suggestions.push('Add a professional summary (+10 points).')
 
-  if (experience.length >= 1) score += 10
-  else suggestions.push('Add at least 1 experience entry.')
+  if (hasExperienceWithBullets) score += 15
+  else suggestions.push('Add experience with bullet points (+15 points).')
 
-  if (skills.length >= 8) score += 10
-  else suggestions.push('Add more skills (target 8+).')
+  if (hasEducation) score += 10
+  else suggestions.push('Add at least one education entry (+10 points).')
 
-  if (hasLink) score += 10
-  else suggestions.push('Add a GitHub or LinkedIn link.')
+  if (hasSkills) score += 10
+  else suggestions.push('Add at least 5 skills (+10 points).')
 
-  if (impactPresent) score += 15
-  else suggestions.push('Add measurable impact (numbers) in bullets.')
+  if (hasProjects) score += 10
+  else suggestions.push('Add at least one project (+10 points).')
 
-  if (completeEducation) score += 10
-  else suggestions.push('Complete education fields (title, institute, date range, details).')
+  if (hasPhone) score += 5
+  else suggestions.push('Add your phone number (+5 points).')
 
-  return { score: Math.min(score, 100), suggestions: suggestions.slice(0, 3) }
-}
+  if (hasLinkedIn) score += 5
+  else suggestions.push('Add your LinkedIn URL (+5 points).')
 
-const getTopImprovements = (data) => {
-  const improvements = []
-  const projects = getFilledProjects(data.projects)
-  const experience = getFilledEntries(data.experience)
-  const summaryWords = getWordCount(data.summary)
-  const skills = getAllSkills(data.skills)
-  const impactPresent = hasImpactNumbers([...experience, ...projects])
+  if (hasGitHub) score += 5
+  else suggestions.push('Add your GitHub URL (+5 points).')
 
-  if (projects.length < 2) improvements.push('Add at least 2 projects.')
-  if (!impactPresent) improvements.push('Add measurable impact (numbers) in bullets.')
-  if (summaryWords < 40) improvements.push('Expand your summary to at least 40 words.')
-  if (skills.length < 8) improvements.push('Add more skills (target 8+).')
-  if (!experience.length) improvements.push('Add experience, internship, or project work.')
+  if (summaryHasActionVerb) score += 10
+  else suggestions.push('Use action verbs in summary (+10 points).')
 
-  return improvements.slice(0, 3)
+  let label = 'Strong Resume'
+  let band = 'strong'
+  if (score <= 40) {
+    label = 'Needs Work'
+    band = 'needs-work'
+  } else if (score <= 70) {
+    label = 'Getting There'
+    band = 'getting-there'
+  }
+
+  return { score: Math.min(score, 100), label, band, suggestions }
 }
 
 const getStoredTemplate = () => {
@@ -397,6 +394,45 @@ function ColorPicker({ selectedColor, onChangeColor }) {
         />
       ))}
     </div>
+  )
+}
+
+function AtsScoreCircle({ result }) {
+  const radius = 48
+  const strokeWidth = 8
+  const circumference = 2 * Math.PI * radius
+  const progress = (result.score / 100) * circumference
+
+  return (
+    <section className="ats-ring-card">
+      <div className={`score-ring-wrap ${result.band}`}>
+        <svg className="score-ring" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="ATS score">
+          <circle cx="60" cy="60" r={radius} className="ring-track" strokeWidth={strokeWidth} fill="none" />
+          <circle
+            cx="60"
+            cy="60"
+            r={radius}
+            className="ring-progress"
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - progress}
+          />
+        </svg>
+        <div className="ring-score">{result.score}</div>
+      </div>
+      <div className="score-meta">
+        <h3>ATS Resume Score</h3>
+        <span className={`score-badge ${result.band}`}>{result.label}</span>
+      </div>
+      {result.suggestions.length ? (
+        <ul className="ats-suggestions">
+          {result.suggestions.map((suggestion) => (
+            <li key={suggestion}>{suggestion}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   )
 }
 
@@ -899,8 +935,8 @@ function BuilderPage() {
     saveDraft({ ...formData, projects: nextProjects })
   }
 
-  const ats = useMemo(() => getAtsAssessment(formData), [formData])
-  const topImprovements = useMemo(() => getTopImprovements(formData), [formData])
+  const atsResult = useMemo(() => calculateAtsScore(formData), [formData])
+  const topImprovements = useMemo(() => atsResult.suggestions.slice(0, 3), [atsResult])
 
   return (
     <AppFrame>
@@ -990,14 +1026,14 @@ function BuilderPage() {
           <section className="ats-card">
             <div className="ats-head">
               <h3>ATS Readiness Score</h3>
-              <span>{ats.score}/100</span>
+              <span>{atsResult.score}/100</span>
             </div>
-            <div className="meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={ats.score}>
-              <div className="meter-fill" style={{ width: `${ats.score}%` }} />
+            <div className="meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={atsResult.score}>
+              <div className="meter-fill" style={{ width: `${atsResult.score}%` }} />
             </div>
-            {ats.suggestions.length ? (
+            {atsResult.suggestions.length ? (
               <ul className="ats-suggestions">
-                {ats.suggestions.map((suggestion) => (
+                {atsResult.suggestions.map((suggestion) => (
                   <li key={suggestion}>{suggestion}</li>
                 ))}
               </ul>
@@ -1025,11 +1061,28 @@ function BuilderPage() {
 }
 
 function PreviewPage() {
-  const data = useMemo(() => hydrateData(localStorage.getItem(storageKey)), [])
+  const [dataRaw, setDataRaw] = useState(() => localStorage.getItem(storageKey) || '')
+  const data = useMemo(() => hydrateData(dataRaw), [dataRaw])
   const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
   const [selectedAccentColor, setSelectedAccentColor] = useState(() => getStoredAccentColor())
   const [exportWarning, setExportWarning] = useState('')
   const [toastMessage, setToastMessage] = useState('')
+  const atsResult = useMemo(() => calculateAtsScore(data), [data])
+
+  useEffect(() => {
+    const syncData = () => {
+      const latest = localStorage.getItem(storageKey) || ''
+      setDataRaw((previous) => (previous === latest ? previous : latest))
+    }
+
+    window.addEventListener('storage', syncData)
+    const intervalId = setInterval(syncData, 600)
+
+    return () => {
+      window.removeEventListener('storage', syncData)
+      clearInterval(intervalId)
+    }
+  }, [])
 
   const changeTemplate = (template) => {
     setSelectedTemplate(template)
@@ -1086,6 +1139,7 @@ function PreviewPage() {
         {exportWarning ? <p className="export-warning">{exportWarning}</p> : null}
         {toastMessage ? <p className="toast-msg">{toastMessage}</p> : null}
       </section>
+      <AtsScoreCircle result={atsResult} />
       <ResumePreview data={data} template={selectedTemplate} accentColor={selectedAccentColor} view="preview" />
     </AppFrame>
   )
