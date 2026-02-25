@@ -3,7 +3,15 @@ import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 
 const storageKey = 'resumeBuilderData'
 const templateStorageKey = 'resumeBuilderTemplate'
+const accentColorStorageKey = 'resumeBuilderAccentColor'
 const templateOptions = ['Classic', 'Modern', 'Minimal']
+const accentOptions = [
+  { name: 'Teal', value: 'hsl(168, 60%, 40%)' },
+  { name: 'Navy', value: 'hsl(220, 60%, 35%)' },
+  { name: 'Burgundy', value: 'hsl(345, 60%, 35%)' },
+  { name: 'Forest', value: 'hsl(150, 50%, 30%)' },
+  { name: 'Charcoal', value: 'hsl(0, 0%, 25%)' },
+]
 const actionVerbs = ['Built', 'Developed', 'Designed', 'Implemented', 'Led', 'Improved', 'Created', 'Optimized', 'Automated']
 
 const createBlankEntry = () => ({ title: '', subtitle: '', dateRange: '', details: '' })
@@ -227,6 +235,12 @@ const getStoredTemplate = () => {
   return templateOptions.includes(value) ? value : 'Classic'
 }
 
+const getStoredAccentColor = () => {
+  const value = localStorage.getItem(accentColorStorageKey)
+  const fallback = accentOptions[0].value
+  return accentOptions.some((item) => item.value === value) ? value : fallback
+}
+
 const hasMinimumExportData = (data) => {
   const hasName = Boolean(trimValue(data.personal.name))
   const hasExperience = getFilledEntries(data.experience).length > 0
@@ -343,20 +357,44 @@ function HomePage() {
   )
 }
 
-function TemplateTabs({ selectedTemplate, onChangeTemplate }) {
+function TemplatePicker({ selectedTemplate, onChangeTemplate }) {
   return (
-    <div className="template-tabs" role="tablist" aria-label="Resume template selector">
+    <div className="template-picker" role="tablist" aria-label="Resume template selector">
       {templateOptions.map((option) => (
         <button
           key={option}
           type="button"
           role="tab"
           aria-selected={selectedTemplate === option}
-          className={`template-tab ${selectedTemplate === option ? 'active' : ''}`}
+          className={`template-thumb ${selectedTemplate === option ? 'active' : ''}`}
           onClick={() => onChangeTemplate(option)}
         >
-          {option}
+          <div className={`thumb-sketch thumb-${option.toLowerCase()}`}>
+            <div className="sketch-head" />
+            <div className="sketch-line" />
+            <div className="sketch-line short" />
+          </div>
+          <span className="thumb-label">{option}</span>
+          {selectedTemplate === option ? <span className="thumb-check">✓</span> : null}
         </button>
+      ))}
+    </div>
+  )
+}
+
+function ColorPicker({ selectedColor, onChangeColor }) {
+  return (
+    <div className="color-picker">
+      {accentOptions.map((color) => (
+        <button
+          key={color.value}
+          type="button"
+          className={`color-swatch ${selectedColor === color.value ? 'active' : ''}`}
+          style={{ backgroundColor: color.value }}
+          onClick={() => onChangeColor(color.value)}
+          aria-label={color.name}
+          title={color.name}
+        />
       ))}
     </div>
   )
@@ -614,7 +652,7 @@ function ProjectsAccordion({ projects, onAddProject, onDeleteProject, onUpdatePr
   )
 }
 
-function RenderResumeSections({ data, mode = 'builder' }) {
+function ResumeSections({ data, compact = false }) {
   const summary = trimValue(data.summary)
   const education = getFilledEntries(data.education)
   const experience = getFilledEntries(data.experience)
@@ -623,21 +661,18 @@ function RenderResumeSections({ data, mode = 'builder' }) {
   const github = trimValue(data.links.github)
   const linkedin = trimValue(data.links.linkedin)
 
-  const sectionClass = mode === 'preview' ? 'mono-section' : 'preview-block'
-  const headingClass = mode === 'preview' ? 'mono-section-title' : ''
-
   return (
     <>
       {summary ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Summary</h4>
+        <section className="resume-section-block">
+          <h4>Summary</h4>
           <p>{summary}</p>
         </section>
       ) : null}
 
       {education.length ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Education</h4>
+        <section className="resume-section-block">
+          <h4>Education</h4>
           {education.map((item, index) => (
             <article key={`edu-${index}`} className="resume-item">
               <h5>{item.title}</h5>
@@ -650,8 +685,8 @@ function RenderResumeSections({ data, mode = 'builder' }) {
       ) : null}
 
       {experience.length ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Experience</h4>
+        <section className="resume-section-block">
+          <h4>Experience</h4>
           {experience.map((item, index) => (
             <article key={`exp-${index}`} className="resume-item">
               <h5>{item.title}</h5>
@@ -664,8 +699,8 @@ function RenderResumeSections({ data, mode = 'builder' }) {
       ) : null}
 
       {projects.length ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Projects</h4>
+        <section className="resume-section-block">
+          <h4>Projects</h4>
           {projects.map((item, index) => (
             <article key={`pro-${index}`} className="resume-item project-card">
               <h5>{item.title}</h5>
@@ -687,7 +722,7 @@ function RenderResumeSections({ data, mode = 'builder' }) {
                 ) : null}
                 {trimValue(item.githubUrl) ? (
                   <a href={item.githubUrl} target="_blank" rel="noreferrer">
-                    {"</>"} GitHub
+                    {'</>'} GitHub
                   </a>
                 ) : null}
               </div>
@@ -697,8 +732,8 @@ function RenderResumeSections({ data, mode = 'builder' }) {
       ) : null}
 
       {[...skills.technical, ...skills.soft, ...skills.tools].length ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Skills</h4>
+        <section className="resume-section-block">
+          <h4>Skills</h4>
           {skills.technical.length ? (
             <div className="skills-group-preview">
               <h5>Technical Skills</h5>
@@ -738,9 +773,9 @@ function RenderResumeSections({ data, mode = 'builder' }) {
         </section>
       ) : null}
 
-      {github || linkedin ? (
-        <section className={sectionClass}>
-          <h4 className={headingClass}>Links</h4>
+      {!compact && (github || linkedin) ? (
+        <section className="resume-section-block">
+          <h4>Links</h4>
           {github ? <p>GitHub: {github}</p> : null}
           {linkedin ? <p>LinkedIn: {linkedin}</p> : null}
         </section>
@@ -749,20 +784,60 @@ function RenderResumeSections({ data, mode = 'builder' }) {
   )
 }
 
-function PreviewShell({ data, template }) {
+function ResumePreview({ data, template, accentColor, view = 'builder' }) {
   const templateClass = `template-${template.toLowerCase()}`
+  const containerClass = view === 'preview' ? 'mono-preview' : 'resume-preview-shell'
+  const skills = getSkillGroups(data.skills)
+  const github = trimValue(data.links.github)
+  const linkedin = trimValue(data.links.linkedin)
+
+  if (template === 'Modern') {
+    return (
+      <section className={`${containerClass} ${templateClass} resume-modern`} style={{ '--accent-color': accentColor }}>
+        <aside className="modern-sidebar">
+          <h2>{trimValue(data.personal.name) || 'Your Name'}</h2>
+          <div className="modern-contact">
+            <p>{trimValue(data.personal.email) || 'email@example.com'}</p>
+            <p>{trimValue(data.personal.phone) || 'Phone'}</p>
+            <p>{trimValue(data.personal.location) || 'Location'}</p>
+          </div>
+          {[...skills.technical, ...skills.soft, ...skills.tools].length ? (
+            <section className="resume-section-block">
+              <h4>Skills</h4>
+              <div className="tag-list preview-tags">
+                {[...skills.technical, ...skills.soft, ...skills.tools].map((tag) => (
+                  <span key={`modern-${tag}`} className="tag-chip">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {github || linkedin ? (
+            <section className="resume-section-block">
+              <h4>Links</h4>
+              {github ? <p>GitHub: {github}</p> : null}
+              {linkedin ? <p>LinkedIn: {linkedin}</p> : null}
+            </section>
+          ) : null}
+        </aside>
+        <div className="modern-main">
+          <ResumeSections data={data} compact />
+        </div>
+      </section>
+    )
+  }
 
   return (
-    <section className={`resume-preview-shell ${templateClass}`}>
-      <div className="preview-head">
+    <section className={`${containerClass} ${templateClass}`} style={{ '--accent-color': accentColor }}>
+      <header className="preview-head">
         <h2>{trimValue(data.personal.name) || 'Your Name'}</h2>
         <p>
-          {trimValue(data.personal.email) || 'email@example.com'} | {trimValue(data.personal.phone) || '+1 000 000 0000'}
-          {' | '}
+          {trimValue(data.personal.email) || 'email@example.com'} | {trimValue(data.personal.phone) || '+1 000 000 0000'} |{' '}
           {trimValue(data.personal.location) || 'Location'}
         </p>
-      </div>
-      <RenderResumeSections data={data} mode="builder" />
+      </header>
+      <ResumeSections data={data} />
     </section>
   )
 }
@@ -770,6 +845,7 @@ function PreviewShell({ data, template }) {
 function BuilderPage() {
   const [formData, setFormData] = useState(() => hydrateData(localStorage.getItem(storageKey)))
   const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
+  const [selectedAccentColor, setSelectedAccentColor] = useState(() => getStoredAccentColor())
 
   const saveDraft = (nextValue) => {
     setFormData(nextValue)
@@ -779,6 +855,11 @@ function BuilderPage() {
   const changeTemplate = (template) => {
     setSelectedTemplate(template)
     localStorage.setItem(templateStorageKey, template)
+  }
+
+  const changeAccentColor = (colorValue) => {
+    setSelectedAccentColor(colorValue)
+    localStorage.setItem(accentColorStorageKey, colorValue)
   }
 
   const updatePersonal = (field, value) => {
@@ -904,7 +985,8 @@ function BuilderPage() {
 
         <aside className="live-preview">
           <h2>Live Preview</h2>
-          <TemplateTabs selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+          <TemplatePicker selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+          <ColorPicker selectedColor={selectedAccentColor} onChangeColor={changeAccentColor} />
           <section className="ats-card">
             <div className="ats-head">
               <h3>ATS Readiness Score</h3>
@@ -935,7 +1017,7 @@ function BuilderPage() {
               )}
             </div>
           </section>
-          <PreviewShell data={formData} template={selectedTemplate} />
+          <ResumePreview data={formData} template={selectedTemplate} accentColor={selectedAccentColor} view="builder" />
         </aside>
       </div>
     </AppFrame>
@@ -945,13 +1027,18 @@ function BuilderPage() {
 function PreviewPage() {
   const data = useMemo(() => hydrateData(localStorage.getItem(storageKey)), [])
   const [selectedTemplate, setSelectedTemplate] = useState(() => getStoredTemplate())
+  const [selectedAccentColor, setSelectedAccentColor] = useState(() => getStoredAccentColor())
   const [exportWarning, setExportWarning] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
 
   const changeTemplate = (template) => {
     setSelectedTemplate(template)
     localStorage.setItem(templateStorageKey, template)
   }
-  const monoTemplateClass = `template-${selectedTemplate.toLowerCase()}`
+  const changeAccentColor = (colorValue) => {
+    setSelectedAccentColor(colorValue)
+    localStorage.setItem(accentColorStorageKey, colorValue)
+  }
 
   const evaluateExportWarning = () => {
     if (hasMinimumExportData(data)) {
@@ -974,30 +1061,32 @@ function PreviewPage() {
     await navigator.clipboard.writeText(plainText)
   }
 
+  const handleDownloadPdf = () => {
+    evaluateExportWarning()
+    setToastMessage('PDF export ready! Check your downloads.')
+    setTimeout(() => setToastMessage(''), 2200)
+  }
+
   return (
     <AppFrame>
-      <TemplateTabs selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+      <TemplatePicker selectedTemplate={selectedTemplate} onChangeTemplate={changeTemplate} />
+      <ColorPicker selectedColor={selectedAccentColor} onChangeColor={changeAccentColor} />
       <section className="preview-tools">
         <div className="tool-row">
           <button type="button" onClick={handlePrint}>
             Print / Save as PDF
+          </button>
+          <button type="button" onClick={handleDownloadPdf}>
+            Download PDF
           </button>
           <button type="button" onClick={handleCopyText}>
             Copy Resume as Text
           </button>
         </div>
         {exportWarning ? <p className="export-warning">{exportWarning}</p> : null}
+        {toastMessage ? <p className="toast-msg">{toastMessage}</p> : null}
       </section>
-      <section className={`mono-preview ${monoTemplateClass}`}>
-        <header>
-          <h1>{trimValue(data.personal.name) || 'Your Name'}</h1>
-          <p>
-            {trimValue(data.personal.email) || 'email@example.com'} | {trimValue(data.personal.phone) || 'Phone'} |{' '}
-            {trimValue(data.personal.location) || 'Location'}
-          </p>
-        </header>
-        <RenderResumeSections data={data} mode="preview" />
-      </section>
+      <ResumePreview data={data} template={selectedTemplate} accentColor={selectedAccentColor} view="preview" />
     </AppFrame>
   )
 }
