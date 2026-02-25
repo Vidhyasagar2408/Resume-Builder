@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 
-const previewStorageKey = 'ai_resume_builder_draft'
+const storageKey = 'resumeBuilderData'
 
 const createBlankEntry = () => ({ title: '', subtitle: '', dateRange: '', details: '' })
 
@@ -23,7 +23,7 @@ const sampleBuilderState = {
     location: 'San Francisco, CA',
   },
   summary:
-    'Product-focused frontend engineer building clean, accessible React applications with thoughtful UX and strong delivery ownership.',
+    'Frontend engineer building premium and accessible product interfaces. Increased form completion by 32% and reduced bounce rate by 18% through content hierarchy, design tokens, and performance-driven React architecture across multiple product surfaces.',
   education: [
     {
       title: 'B.Tech in Computer Science',
@@ -37,7 +37,7 @@ const sampleBuilderState = {
       title: 'Frontend Developer',
       subtitle: 'Nova Labs',
       dateRange: '2023 - Present',
-      details: 'Built reusable UI systems and shipped customer-facing features across SaaS dashboards.',
+      details: 'Shipped 14 production features and improved Lighthouse performance from 72 to 94.',
     },
   ],
   projects: [
@@ -45,11 +45,96 @@ const sampleBuilderState = {
       title: 'AI Resume Builder',
       subtitle: 'React, Vite',
       dateRange: '2026',
-      details: 'Developing a premium resume workflow app with guided editing and polished previews.',
+      details: 'Built guided resume authoring flow used by 1.2k+ learners.',
+    },
+    {
+      title: 'Portfolio CMS',
+      subtitle: 'Node, React',
+      dateRange: '2025',
+      details: 'Reduced content publishing time by 45% with reusable templates.',
     },
   ],
-  skills: 'React, JavaScript, TypeScript, CSS, API Integration, Git',
+  skills: 'React, JavaScript, TypeScript, CSS, HTML, API Integration, Git, Testing',
   links: { github: 'github.com/alexcarter', linkedin: 'linkedin.com/in/alexcarter' },
+}
+
+const trimValue = (value) => (value || '').trim()
+
+const getWordCount = (text) => trimValue(text).split(/\s+/).filter(Boolean).length
+
+const getSkills = (skillsText) =>
+  trimValue(skillsText)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+const isFilledEntry = (entry) =>
+  [entry.title, entry.subtitle, entry.dateRange, entry.details].some((value) => trimValue(value))
+
+const isCompleteEntry = (entry) =>
+  [entry.title, entry.subtitle, entry.dateRange, entry.details].every((value) => trimValue(value))
+
+const getFilledEntries = (entries = []) => entries.filter(isFilledEntry)
+
+const hasImpactNumbers = (entries) => {
+  const numberPattern = /\b\d+(?:\.\d+)?\s*(?:%|x|k)?\b/i
+  return entries.some((entry) => numberPattern.test([entry.title, entry.subtitle, entry.details].join(' ')))
+}
+
+const hydrateData = (rawValue) => {
+  if (!rawValue) return initialBuilderState
+
+  try {
+    const parsed = JSON.parse(rawValue)
+    return {
+      personal: { ...initialBuilderState.personal, ...(parsed.personal || {}) },
+      summary: parsed.summary || '',
+      education: Array.isArray(parsed.education) && parsed.education.length ? parsed.education : [createBlankEntry()],
+      experience: Array.isArray(parsed.experience) && parsed.experience.length ? parsed.experience : [createBlankEntry()],
+      projects: Array.isArray(parsed.projects) && parsed.projects.length ? parsed.projects : [createBlankEntry()],
+      skills: parsed.skills || '',
+      links: { ...initialBuilderState.links, ...(parsed.links || {}) },
+    }
+  } catch {
+    return initialBuilderState
+  }
+}
+
+const getAtsAssessment = (data) => {
+  let score = 0
+  const suggestions = []
+
+  const summaryWords = getWordCount(data.summary)
+  const projects = getFilledEntries(data.projects)
+  const experience = getFilledEntries(data.experience)
+  const education = getFilledEntries(data.education)
+  const skills = getSkills(data.skills)
+  const hasLink = Boolean(trimValue(data.links.github) || trimValue(data.links.linkedin))
+  const impactPresent = hasImpactNumbers([...experience, ...projects])
+  const completeEducation = education.some(isCompleteEntry)
+
+  if (summaryWords >= 40 && summaryWords <= 120) score += 15
+  else suggestions.push('Write a stronger summary (40-120 words).')
+
+  if (projects.length >= 2) score += 10
+  else suggestions.push('Add at least 2 projects.')
+
+  if (experience.length >= 1) score += 10
+  else suggestions.push('Add at least 1 experience entry.')
+
+  if (skills.length >= 8) score += 10
+  else suggestions.push('Add more skills (target 8+).')
+
+  if (hasLink) score += 10
+  else suggestions.push('Add a GitHub or LinkedIn link.')
+
+  if (impactPresent) score += 15
+  else suggestions.push('Add measurable impact (numbers) in bullets.')
+
+  if (completeEducation) score += 10
+  else suggestions.push('Complete education fields (title, institute, date range, details).')
+
+  return { score: Math.min(score, 100), suggestions: suggestions.slice(0, 3) }
 }
 
 function AppFrame({ children }) {
@@ -117,56 +202,109 @@ function DynamicSection({ title, items, onChange, onAdd }) {
   )
 }
 
+function RenderResumeSections({ data, mode = 'builder' }) {
+  const summary = trimValue(data.summary)
+  const education = getFilledEntries(data.education)
+  const experience = getFilledEntries(data.experience)
+  const projects = getFilledEntries(data.projects)
+  const skills = getSkills(data.skills)
+  const github = trimValue(data.links.github)
+  const linkedin = trimValue(data.links.linkedin)
+
+  const sectionClass = mode === 'preview' ? 'mono-section' : 'preview-block'
+  const headingClass = mode === 'preview' ? 'mono-section-title' : ''
+
+  return (
+    <>
+      {summary ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Summary</h4>
+          <p>{summary}</p>
+        </section>
+      ) : null}
+
+      {education.length ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Education</h4>
+          {education.map((item, index) => (
+            <article key={`edu-${index}`} className="resume-item">
+              <h5>{item.title}</h5>
+              <p>{item.subtitle}</p>
+              <p>{item.dateRange}</p>
+              <p>{item.details}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {experience.length ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Experience</h4>
+          {experience.map((item, index) => (
+            <article key={`exp-${index}`} className="resume-item">
+              <h5>{item.title}</h5>
+              <p>{item.subtitle}</p>
+              <p>{item.dateRange}</p>
+              <p>{item.details}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {projects.length ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Projects</h4>
+          {projects.map((item, index) => (
+            <article key={`pro-${index}`} className="resume-item">
+              <h5>{item.title}</h5>
+              <p>{item.subtitle}</p>
+              <p>{item.dateRange}</p>
+              <p>{item.details}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {skills.length ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Skills</h4>
+          <p>{skills.join(', ')}</p>
+        </section>
+      ) : null}
+
+      {github || linkedin ? (
+        <section className={sectionClass}>
+          <h4 className={headingClass}>Links</h4>
+          {github ? <p>GitHub: {github}</p> : null}
+          {linkedin ? <p>LinkedIn: {linkedin}</p> : null}
+        </section>
+      ) : null}
+    </>
+  )
+}
+
 function PreviewShell({ data }) {
   return (
     <section className="resume-preview-shell">
       <div className="preview-head">
-        <h2>{data.personal.name || 'Your Name'}</h2>
+        <h2>{trimValue(data.personal.name) || 'Your Name'}</h2>
         <p>
-          {data.personal.email || 'email@example.com'} | {data.personal.phone || '+1 000 000 0000'} |{' '}
-          {data.personal.location || 'Location'}
+          {trimValue(data.personal.email) || 'email@example.com'} | {trimValue(data.personal.phone) || '+1 000 000 0000'}
+          {' | '}
+          {trimValue(data.personal.location) || 'Location'}
         </p>
       </div>
-      <div className="preview-block">
-        <h4>Summary</h4>
-        <p>{data.summary || 'Summary appears here as you type in the form.'}</p>
-      </div>
-      <div className="preview-block">
-        <h4>Education</h4>
-        <p>Structured education entries will appear here.</p>
-      </div>
-      <div className="preview-block">
-        <h4>Experience</h4>
-        <p>Structured experience entries will appear here.</p>
-      </div>
-      <div className="preview-block">
-        <h4>Projects</h4>
-        <p>Structured project entries will appear here.</p>
-      </div>
-      <div className="preview-block">
-        <h4>Skills</h4>
-        <p>{data.skills || 'Comma-separated skills will appear here.'}</p>
-      </div>
+      <RenderResumeSections data={data} mode="builder" />
     </section>
   )
 }
 
 function BuilderPage() {
-  const [formData, setFormData] = useState(() => {
-    const fromStorage = localStorage.getItem(previewStorageKey)
-    if (fromStorage) {
-      try {
-        return JSON.parse(fromStorage)
-      } catch {
-        return initialBuilderState
-      }
-    }
-    return initialBuilderState
-  })
+  const [formData, setFormData] = useState(() => hydrateData(localStorage.getItem(storageKey)))
 
   const saveDraft = (nextValue) => {
     setFormData(nextValue)
-    localStorage.setItem(previewStorageKey, JSON.stringify(nextValue))
+    localStorage.setItem(storageKey, JSON.stringify(nextValue))
   }
 
   const updatePersonal = (field, value) => {
@@ -186,6 +324,8 @@ function BuilderPage() {
   const addDynamic = (section) => {
     saveDraft({ ...formData, [section]: [...formData[section], createBlankEntry()] })
   }
+
+  const ats = useMemo(() => getAtsAssessment(formData), [formData])
 
   return (
     <AppFrame>
@@ -276,6 +416,24 @@ function BuilderPage() {
 
         <aside className="live-preview">
           <h2>Live Preview</h2>
+          <section className="ats-card">
+            <div className="ats-head">
+              <h3>ATS Readiness Score</h3>
+              <span>{ats.score}/100</span>
+            </div>
+            <div className="meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={ats.score}>
+              <div className="meter-fill" style={{ width: `${ats.score}%` }} />
+            </div>
+            {ats.suggestions.length ? (
+              <ul className="ats-suggestions">
+                {ats.suggestions.map((suggestion) => (
+                  <li key={suggestion}>{suggestion}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ats-good">Strong ATS baseline for v1.</p>
+            )}
+          </section>
           <PreviewShell data={formData} />
         </aside>
       </div>
@@ -284,46 +442,19 @@ function BuilderPage() {
 }
 
 function PreviewPage() {
-  const data = useMemo(() => {
-    const fromStorage = localStorage.getItem(previewStorageKey)
-    if (!fromStorage) return initialBuilderState
-    try {
-      return JSON.parse(fromStorage)
-    } catch {
-      return initialBuilderState
-    }
-  }, [])
+  const data = useMemo(() => hydrateData(localStorage.getItem(storageKey)), [])
 
   return (
     <AppFrame>
       <section className="mono-preview">
         <header>
-          <h1>{data.personal.name || 'Your Name'}</h1>
+          <h1>{trimValue(data.personal.name) || 'Your Name'}</h1>
           <p>
-            {data.personal.email || 'email@example.com'} | {data.personal.phone || 'Phone'} |{' '}
-            {data.personal.location || 'Location'}
+            {trimValue(data.personal.email) || 'email@example.com'} | {trimValue(data.personal.phone) || 'Phone'} |{' '}
+            {trimValue(data.personal.location) || 'Location'}
           </p>
         </header>
-        <article>
-          <h2>Summary</h2>
-          <p>{data.summary || 'Your summary will appear here.'}</p>
-        </article>
-        <article>
-          <h2>Education</h2>
-          <p>Clean structured resume layout placeholder.</p>
-        </article>
-        <article>
-          <h2>Experience</h2>
-          <p>Clean structured resume layout placeholder.</p>
-        </article>
-        <article>
-          <h2>Projects</h2>
-          <p>Clean structured resume layout placeholder.</p>
-        </article>
-        <article>
-          <h2>Skills</h2>
-          <p>{data.skills || 'Skills will appear here.'}</p>
-        </article>
+        <RenderResumeSections data={data} mode="preview" />
       </section>
     </AppFrame>
   )
